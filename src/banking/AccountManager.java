@@ -5,13 +5,18 @@ import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 
-// 계좌 관련 모든 기능 수행
+/**
+ * AccountManager
+ * - 계좌 생성, 입금, 출금, 삭제, 전체조회, 자동저장 관리
+ * - HashSet<E> 사용 → 중복 계좌 방지 (equals/hashCode 사용)
+ * - 파일 입출력: AccountInfo.obj
+ */
 public class AccountManager {
-    private Set<Account> accSet = new HashSet<>(); // HashSet으로 계좌 관리
-    private Scanner sc = new Scanner(System.in);   // 입력용
-    private AutoSaver autoSaver;                   // 자동저장 쓰레드
+    private Set<Account> accSet = new HashSet<>();
+    private Scanner sc = new Scanner(System.in);
+    private AutoSaver autoSaver; // 자동저장 스레드
 
-    // 생성자: 프로그램 시작시 obj파일이 있으면 불러오기
+    // 생성자 → 시작 시 파일 불러오기
     public AccountManager() {
         try {
             File file = new File("AccountInfo.obj");
@@ -20,9 +25,7 @@ public class AccountManager {
                 accSet = (Set<Account>) ois.readObject();
                 ois.close();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch(Exception e){ e.printStackTrace(); }
     }
 
     // 메뉴 출력
@@ -38,10 +41,10 @@ public class AccountManager {
         System.out.print("선택: ");
     }
 
-    // 계좌 개설
+     // 계좌 생성
     public void makeAccount() {
         System.out.println("***신규계좌개설***");
-        System.out.println("1.보통계좌 2.신용신뢰계좌");
+        System.out.println("1.보통계좌 2.신용신뢰계좌 3.특판계좌");
         int choice = sc.nextInt(); sc.nextLine();
 
         System.out.print("계좌번호: "); String accNum = sc.nextLine();
@@ -50,13 +53,14 @@ public class AccountManager {
 
         if(choice == ICustomDefine.NORMAL) {
             System.out.print("기본이자(%): "); int interest = sc.nextInt();
-            NormalAccount na = new NormalAccount(accNum, name, balance, interest);
-            accSet.add(na);
+            accSet.add(new NormalAccount(accNum, name, balance, interest));
         } else if(choice == ICustomDefine.HIGHCREDIT) {
             System.out.print("기본이자(%): "); int interest = sc.nextInt();
             System.out.print("신용등급(A,B,C): "); char grade = sc.next().charAt(0);
-            HighCreditAccount ha = new HighCreditAccount(accNum, name, balance, interest, grade);
-            accSet.add(ha);
+            accSet.add(new HighCreditAccount(accNum, name, balance, interest, grade));
+        } else if(choice == ICustomDefine.SPECIAL) {
+            System.out.print("기본이자(%): "); int interest = sc.nextInt();
+            accSet.add(new SpecialAccount(accNum, name, balance, interest));
         }
         System.out.println("계좌계설이 완료되었습니다.");
     }
@@ -66,16 +70,6 @@ public class AccountManager {
         System.out.println("***입   금***");
         System.out.print("계좌번호: "); String accNum = sc.next();
         System.out.print("입금액: "); int amount = sc.nextInt();
-
-        // 음수, 500원 단위 체크
-        if(amount < 0) {
-            System.out.println("입금액은 음수일 수 없습니다.");
-            return;
-        }
-        if(amount % 500 != 0) {
-            System.out.println("입금액은 500원 단위로만 가능합니다.");
-            return;
-        }
 
         for(Account acc : accSet) {
             if(acc.getAccNumber().equals(accNum)) {
@@ -93,27 +87,10 @@ public class AccountManager {
         System.out.print("계좌번호: "); String accNum = sc.next();
         System.out.print("출금액: "); int amount = sc.nextInt();
 
-        // 음수, 1000원 단위 체크
-        if(amount < 0) {
-            System.out.println("출금액은 음수일 수 없습니다.");
-            return;
-        }
-        if(amount % 1000 != 0) {
-            System.out.println("출금액은 1000원 단위로만 가능합니다.");
-            return;
-        }
-
         for(Account acc : accSet) {
             if(acc.getAccNumber().equals(accNum)) {
                 if(amount > acc.getBalance()) {
-                    System.out.println("잔고가 부족합니다. 금액전체를 출금할까요? (Y/N)");
-                    char choice = sc.next().charAt(0);
-                    if(choice == 'Y' || choice == 'y') {
-                        acc.withdraw(acc.getBalance());
-                        System.out.println("전체 출금 완료되었습니다.");
-                    } else {
-                        System.out.println("출금 요청 취소되었습니다.");
-                    }
+                    System.out.println("잔고가 부족합니다. 출금불가");
                 } else {
                     acc.withdraw(amount);
                     System.out.println("출금이 완료되었습니다.");
@@ -124,7 +101,7 @@ public class AccountManager {
         System.out.println("계좌번호를 찾을 수 없습니다.");
     }
 
-    // 전체 계좌 정보 출력
+    // 계좌정보 출력
     public void showAccInfo() {
         System.out.println("***계좌정보출력***");
         for(Account acc : accSet) {
@@ -143,7 +120,7 @@ public class AccountManager {
         System.out.println("삭제 완료.");
     }
 
-    // 자동저장 옵션 실행
+    // 자동 저장 옵션
     public void saveOption() {
         if(autoSaver != null && autoSaver.isAlive()) {
             System.out.println("이미 자동저장이 실행중입니다.");
@@ -164,7 +141,6 @@ public class AccountManager {
             e.printStackTrace();
         }
 
-        // 자동저장 쓰레드 종료
         if(autoSaver != null && autoSaver.isAlive()) {
             autoSaver.stopAutoSave();
         }
