@@ -1,7 +1,7 @@
 package banking;
 
 import java.util.Scanner;
-import banking.threeby3.ThreeByThreePuzzle;
+import banking.ThreeByThreePuzzle;
 
 public class BankingSystemMain {
     public static void main(String[] args) {

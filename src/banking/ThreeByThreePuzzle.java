@@ -1,4 +1,4 @@
-package banking.threeby3;
+package banking;
 
 import java.util.Scanner;
 import java.util.Random;
